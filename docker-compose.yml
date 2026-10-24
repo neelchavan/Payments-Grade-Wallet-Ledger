@@ -1,0 +1,61 @@
+x-app-env: &app-env
+  DB_URL: jdbc:postgresql://postgres:5432/payments?reWriteBatchedInserts=true
+  DB_USER: payments
+  DB_PASSWORD: payments
+  ADMIN_KEY: ${ADMIN_KEY:-dev-admin-key}
+  LLM_PROVIDER: ${LLM_PROVIDER:-mock}
+  OPENROUTER_API_KEY: ${OPENROUTER_API_KEY:-}
+  OPENROUTER_MODEL: ${OPENROUTER_MODEL:-google/gemma-4-31b-it:free}
+
+services:
+  postgres:
+    image: postgres:16
+    environment:
+      POSTGRES_DB: payments
+      POSTGRES_USER: payments
+      POSTGRES_PASSWORD: payments
+    ports:
+      - "5432:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U payments -d payments"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+
+  api:
+    build: .
+    environment: *app-env
+    ports:
+      - "8080:8080"
+    depends_on:
+      postgres:
+        condition: service_healthy
+
+  worker:
+    build: .
+    environment:
+      <<: *app-env
+      SPRING_PROFILES_ACTIVE: worker
+      SERVER_PORT: "8081"
+    depends_on:
+      postgres:
+        condition: service_healthy
+
+  # One-off data loader: docker compose --profile seed run --rm seed  (SEED_TRANSFERS=500000 for 1M entries)
+  seed:
+    build: .
+    profiles: ["seed"]
+    environment:
+      <<: *app-env
+      SPRING_PROFILES_ACTIVE: seed
+      SEED_USERS: ${SEED_USERS:-1000}
+      SEED_WALLETS: ${SEED_WALLETS:-2000}
+      SEED_TRANSFERS: ${SEED_TRANSFERS:-100000}
+    depends_on:
+      postgres:
+        condition: service_healthy
+
+volumes:
+  pgdata:

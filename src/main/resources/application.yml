@@ -1,0 +1,25 @@
+spring:
+  application:
+    name: payments-grade
+  datasource:
+    url: ${DB_URL:jdbc:postgresql://localhost:5432/payments?reWriteBatchedInserts=true}
+    username: ${DB_USER:payments}
+    password: ${DB_PASSWORD:payments}
+  flyway:
+    enabled: true
+  jackson:
+    property-naming-strategy: SNAKE_CASE
+
+server:
+  error:
+    include-message: never
+    include-stacktrace: never
+
+app:
+  admin-key: ${ADMIN_KEY:dev-admin-key}
+  llm:
+    provider: ${LLM_PROVIDER:mock}
+    openrouter:
+      api-key: ${OPENROUTER_API_KEY:}
+      model: ${OPENROUTER_MODEL:google/gemma-4-31b-it:free}
+      base-url: https://openrouter.ai/api/v1
